@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { Check, ChevronDown, Menu, Book, Cpu, Search } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import LoginModal from './LoginModal';
 
 const tabMeta = [
   { key: 'Learning Tools', Icon: Book },
@@ -16,6 +18,53 @@ const services = [
 
 const Plans = () => {
   const [activeTab, setActiveTab] = useState('Learning Tools');
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState<string>('');
+  const navigate = useNavigate();
+
+  const handlePlanSelection = (planName: string, price: string) => {
+    const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+    
+    if (!isLoggedIn) {
+      setSelectedPlan(planName);
+      setShowLoginModal(true);
+      return;
+    }
+
+    // Create order in history with pending status
+    const order = {
+      id: Date.now().toString(),
+      planName: planName,
+      price: price,
+      originalPrice: price,
+      discountPrice: '$0.00',
+      finalPrice: price,
+      status: 'Pending',
+      purchaseDate: new Date().toISOString(),
+      orderedDate: new Date().toISOString()
+    };
+
+    // Get existing order history
+    const existingHistory = JSON.parse(localStorage.getItem('orderHistory') || '[]');
+    existingHistory.push(order);
+    localStorage.setItem('orderHistory', JSON.stringify(existingHistory));
+
+    // Redirect to dashboard
+    navigate('/dashboard');
+  };
+
+  const handleLogin = () => {
+    localStorage.setItem('isLoggedIn', 'true');
+    setShowLoginModal(false);
+    
+    // Handle the selected plan after login
+    if (selectedPlan) {
+      const price = selectedPlan === 'Premium' ? '$19.99' : '$39.99';
+      handlePlanSelection(selectedPlan, price);
+    } else {
+      navigate('/dashboard');
+    }
+  };
 
   return (
     <section className="bg-white py-20 px-4 md:px-12 w-full">
@@ -94,7 +143,10 @@ const Plans = () => {
                 </li>
              </ul>
 
-             <button className="w-full py-3 rounded-lg border-2 border-blue-600 text-blue-600 font-bold hover:bg-blue-500 hover:text-white transition-colors cursor-pointer">
+             <button 
+               onClick={() => handlePlanSelection('Premium', '$19.99')}
+               className="w-full py-3 rounded-lg border-2 border-blue-600 text-blue-600 font-bold hover:bg-blue-500 hover:text-white transition-colors cursor-pointer"
+             >
                Get Started
              </button>
           </div>
@@ -128,7 +180,10 @@ const Plans = () => {
                 </li>
              </ul>
 
-             <button className=" border-2 border-blue-500 w-full py-3 rounded-lg bg-blue-600 text-white font-bold hover:bg-white hover:text-black transition-colors shadow-lg shadow-blue-200 cursor-pointer">
+             <button 
+               onClick={() => handlePlanSelection('Advance', '$39.99')}
+               className=" border-2 border-blue-500 w-full py-3 rounded-lg bg-blue-600 text-white font-bold hover:bg-white hover:text-black transition-colors shadow-lg shadow-blue-200 cursor-pointer"
+             >
                Get Started
              </button>
           </div>
@@ -143,6 +198,14 @@ const Plans = () => {
         </div>
 
       </div>
+
+      {/* Login Modal */}
+      <LoginModal 
+        isOpen={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+        onLogin={handleLogin}
+        planName={selectedPlan}
+      />
     </section>
   );
 };
